@@ -3,7 +3,7 @@ import { db } from '@/lib/db';
 import { stores, products, stock } from '@/lib/db/schema';
 import { eq, and, gt, sql, desc, like, ilike } from 'drizzle-orm';
 import { z } from 'zod';
-import { TOOL_METADATA } from '@/lib/mcp';
+import { TOOL_METADATA, FIND_PRODUCT_NEARBY_TOOL, RESERVE_STOCK_ITEM_TOOL, PARAMETER_ALIASES } from '@/lib/mcp';
 
 const findProductSchema = z.object({
   product_query: z.string(),
@@ -14,21 +14,80 @@ const findProductSchema = z.object({
 
 const reserveStockSchema = z.object({
   product_id: z.string(),
-  store_id: z.string(),
+  venue_id: z.string(), // Standardized cross-project identifier
   quantity: z.number().int().positive()
 });
 
-export async function GET() {
-  return NextResponse.json(TOOL_METADATA);
+/**
+ * Security Middleware: Validates INTERNAL_SYSTEM_KEY header
+ * Returns 401 if key is missing or invalid
+ */
+function validateSecurityHeaders(req: NextRequest): NextResponse | null {
+  const internalKey = req.headers.get('x-internal-system-key') || req.headers.get('INTERNAL_SYSTEM_KEY');
+  const validKey = process.env.INTERNAL_SYSTEM_KEY;
+
+  if (!validKey) {
+    console.error('INTERNAL_SYSTEM_KEY not configured');
+    return NextResponse.json(
+      { error: 'Server configuration error' },
+      { status: 500 }
+    );
+  }
+
+  if (!internalKey || internalKey !== validKey) {
+    return NextResponse.json(
+      { error: 'Unauthorized: Invalid or missing Internal System Key' },
+      { status: 401 }
+    );
+  }
+
+  return null;
+}
+
+/**
+ * Maps standardized parameters to internal parameter names
+ * Handles venue_id -> store_id mapping for cross-project compatibility
+ */
+function mapParameters(params: Record<string, any>): Record<string, any> {
+  const mapped = { ...params };
+  
+  // Apply parameter aliases
+  for (const [alias, primary] of Object.entries(PARAMETER_ALIASES)) {
+    if (mapped[alias] !== undefined && mapped[primary] === undefined) {
+      mapped[primary as string] = mapped[alias];
+      delete mapped[alias];
+    }
+  }
+  
+  return mapped;
+}
+
+export async function GET(req: NextRequest) {
+  // Validate security headers
+  const securityError = validateSecurityHeaders(req);
+  if (securityError) return securityError;
+
+  // Return full tool definitions with metadata
+  return NextResponse.json({
+    tools: [FIND_PRODUCT_NEARBY_TOOL, RESERVE_STOCK_ITEM_TOOL],
+    metadata: TOOL_METADATA
+  });
 }
 
 export async function POST(req: NextRequest) {
+  // Validate security headers
+  const securityError = validateSecurityHeaders(req);
+  if (securityError) return securityError;
+
   try {
     const body = await req.json();
     const { tool, params } = body;
+    
+    // Map standardized parameters to internal names
+    const mappedParams = mapParameters(params);
 
     if (tool === 'find_product_nearby') {
-      const { product_query, user_lat, user_lng, max_radius_miles } = findProductSchema.parse(params);
+      const { product_query, user_lat, user_lng, max_radius_miles } = findProductSchema.parse(mappedParams);
 
       // Haversine formula for distance in miles
       // 3959 * acos( cos( radians(user_lat) ) * cos( radians( latitude ) ) * cos( radians( longitude ) - radians(user_lng) ) + sin( radians(user_lat) ) * sin( radians( latitude ) ) )
@@ -85,7 +144,10 @@ export async function POST(req: NextRequest) {
     }
 
     if (tool === 'reserve_stock_item') {
-      const { product_id, store_id, quantity } = reserveStockSchema.parse(params);
+      const { product_id, venue_id, quantity } = reserveStockSchema.parse(mappedParams);
+      
+      // venue_id is mapped to store_id internally
+      const store_id = venue_id;
 
       try {
         await db.transaction(async (tx) => {
