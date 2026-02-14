@@ -29,6 +29,7 @@ export default function RootLayout({
               <div className="flex gap-6 items-center">
                 <Link href="/search" className="text-sm font-medium hover:text-primary">Search</Link>
                 <Link href="/inventory" className="text-sm font-medium hover:text-primary">Inventory</Link>
+                <Link href="/admin" className="text-sm font-medium hover:text-primary">Admin</Link>
                 <SignedOut>
                   <SignInButton />
                 </SignedOut>
