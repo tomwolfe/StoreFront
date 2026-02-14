@@ -7,7 +7,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { SearchSchema } from "@/lib/shared-schema";
 
-import { auth } from "@clerk/nextjs/server";
+import { getAppAuth } from "@/lib/auth";
 import { reservations, users } from "@/lib/db/schema";
 
 const reserveSchema = z.object({
@@ -70,7 +70,7 @@ export async function reserveStock(data: {
   store_id: string;
   quantity: number;
 }) {
-  const { userId } = await auth();
+  const { userId } = await getAppAuth();
   if (!userId) {
     return { success: false, error: "Authentication required" } as const;
   }
@@ -135,7 +135,7 @@ export async function reserveStock(data: {
 }
 
 export async function getInventory() {
-  const { userId } = await auth();
+  const { userId } = await getAppAuth();
   if (!userId) {
     throw new Error("Authentication required");
   }

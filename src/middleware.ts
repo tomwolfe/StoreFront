@@ -2,7 +2,15 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 
 const isApiRoute = createRouteMatcher(['/api(.*)']);
-const isPublicRoute = createRouteMatcher(['/api/auth/bridge', '/shop(.*)']);
+const isPublicRoute = createRouteMatcher([
+  '/api/auth/bridge', 
+  '/shop(.*)', 
+  '/search(.*)', 
+  '/inventory(.*)', 
+  '/admin(.*)',
+  '/',
+  '/api/inventory/sync'
+]);
 
 const hasClerkKeys = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && 
                      process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.length > 20;
@@ -10,17 +18,6 @@ const hasClerkKeys = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
 export default async function middleware(request: NextRequest, event: any) {
   const { pathname } = request.nextUrl;
   
-  // Allow bridge session cookie to bypass Clerk for specific routes
-  const bridgeAllowedRoutes = ['/shop', '/search', '/inventory', '/'];
-  const isBridgeRoute = bridgeAllowedRoutes.some(route => pathname === route || pathname.startsWith(route + '/'));
-  
-  if (isBridgeRoute) {
-    const bridgeSession = request.cookies.get('app_bridge_session');
-    if (bridgeSession) {
-      return NextResponse.next();
-    }
-  }
-
   // If no Clerk keys, we can't use clerkMiddleware
   if (!hasClerkKeys) {
     // Basic API security if internal key is present
@@ -36,6 +33,7 @@ export default async function middleware(request: NextRequest, event: any) {
 
   // Standard Clerk middleware
   return clerkMiddleware(async (auth, request) => {
+    // Allow bridge session to bypass Clerk auth redirects by treating these as public
     if (isPublicRoute(request)) {
       return NextResponse.next();
     }

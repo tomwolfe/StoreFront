@@ -5,7 +5,7 @@ import { products, stock, users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { auth } from "@clerk/nextjs/server";
+import { getAppAuth } from "@/lib/auth";
 
 const productSchema = z.object({
   name: z.string().min(1),
@@ -15,12 +15,8 @@ const productSchema = z.object({
 });
 
 async function validateMerchant() {
-  const { userId, sessionClaims } = await auth();
+  const { userId, sessionClaims, role: clerkRole } = await getAppAuth();
   if (!userId) throw new Error("Unauthorized");
-  
-  // Checking Clerk publicMetadata for role
-  // @ts-ignore
-  const role = sessionClaims?.metadata?.role;
   
   const [user] = await db.select().from(users).where(eq(users.clerkId, userId)).limit(1);
   
@@ -29,7 +25,7 @@ async function validateMerchant() {
     throw new Error("User not found in database");
   }
 
-  if (role !== "merchant" && user.role !== "merchant") {
+  if (clerkRole !== "merchant" && user.role !== "merchant") {
     throw new Error("Forbidden: Merchant role required");
   }
   

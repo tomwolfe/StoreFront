@@ -11,18 +11,17 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { createProduct, updateProduct, deleteProduct } from "@/lib/actions/admin";
-import { auth } from "@clerk/nextjs/server";
+import { getAppAuth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { desc } from "drizzle-orm";
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminProductsPage() {
-  const { userId, sessionClaims } = await auth();
+  const { userId, role } = await getAppAuth();
   if (!userId) redirect("/");
   
-  // @ts-ignore
-  if (sessionClaims?.metadata?.role !== "merchant") {
+  if (role !== "merchant") {
     // Basic check, the server actions have more robust checks
     redirect("/");
   }
