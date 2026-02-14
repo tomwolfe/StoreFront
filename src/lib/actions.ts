@@ -72,7 +72,7 @@ export async function reserveStock(data: {
 }) {
   const session = await auth();
   if (!session?.user?.id) {
-    return { success: false, error: "Authentication required" };
+    return { success: false, error: "Authentication required" } as const;
   }
 
   const { product_id, store_id, quantity } = reserveSchema.parse(data);
@@ -113,6 +113,10 @@ export async function reserveStock(data: {
         );
 
       // Create reservation
+      if (!session.user?.id) {
+        throw new Error("User ID is missing from session");
+      }
+
       await tx.insert(reservations).values({
         userId: session.user.id,
         productId: product_id,
@@ -123,10 +127,10 @@ export async function reserveStock(data: {
 
       revalidatePath("/inventory");
       revalidatePath("/search");
-      return { success: true };
+      return { success: true } as const;
     });
   } catch (error: unknown) {
-    return { success: false, error: error instanceof Error ? error.message : "An unknown error occurred" };
+    return { success: false, error: error instanceof Error ? error.message : "An unknown error occurred" } as const;
   }
 }
 

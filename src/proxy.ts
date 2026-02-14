@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export function middleware(request: NextRequest) {
-  // Only middleware for API routes
+export function proxy(request: NextRequest) {
+  // Only proxy for API routes
   if (request.nextUrl.pathname.startsWith('/api')) {
     const internalKey = request.headers.get('x-internal-system-key');
     const validKey = process.env.INTERNAL_SYSTEM_KEY;
