@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, doublePrecision, integer, timestamp, uniqueIndex, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, text, doublePrecision, integer, timestamp, uniqueIndex, pgEnum, primaryKey } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 export const userRoleEnum = pgEnum('user_role', ['shopper', 'merchant']);
@@ -36,11 +36,11 @@ export const stock = pgTable('stock', {
   };
 });
 
-export const users = pgTable('users', {
+export const users = pgTable('user', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name'),
   email: text('email').notNull().unique(),
-  emailVerified: timestamp('email_verified', { mode: 'date' }),
+  emailVerified: timestamp('emailVerified', { mode: 'date' }),
   image: text('image'),
   role: userRoleEnum('role').notNull().default('shopper'),
   managedStoreId: uuid('managed_store_id').references(() => stores.id),
@@ -48,7 +48,7 @@ export const users = pgTable('users', {
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
-export const accounts = pgTable('accounts', {
+export const accounts = pgTable('account', {
   userId: uuid('userId').notNull().references(() => users.id, { onDelete: 'cascade' }),
   type: text('type').notNull(),
   provider: text('provider').notNull(),
@@ -61,10 +61,10 @@ export const accounts = pgTable('accounts', {
   id_token: text('id_token'),
   session_state: text('session_state'),
 }, (account) => ({
-  compoundKey: uniqueIndex('accounts_compound_key').on(account.provider, account.providerAccountId),
+  compoundKey: primaryKey({ columns: [account.provider, account.providerAccountId] }),
 }));
 
-export const sessions = pgTable('sessions', {
+export const sessions = pgTable('session', {
   sessionToken: text('sessionToken').notNull().primaryKey(),
   userId: uuid('userId').notNull().references(() => users.id, { onDelete: 'cascade' }),
   expires: timestamp('expires', { mode: 'date' }).notNull(),
@@ -75,7 +75,7 @@ export const verificationTokens = pgTable('verificationToken', {
   token: text('token').notNull(),
   expires: timestamp('expires', { mode: 'date' }).notNull(),
 }, (vt) => ({
-  compoundKey: uniqueIndex('verification_token_compound_key').on(vt.identifier, vt.token),
+  compoundKey: primaryKey({ columns: [vt.identifier, vt.token] }),
 }));
 
 export const reservations = pgTable('reservations', {
