@@ -9,15 +9,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { auth } from "@/auth";
+import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 
 export const dynamic = 'force-dynamic';
 
 export default async function InventoryPage() {
-  const session = await auth();
-  if (!session) {
-    redirect("/api/auth/signin");
+  const { userId, redirectToSignIn } = await auth();
+  if (!userId) {
+    return redirectToSignIn();
   }
 
   const { stock: stockItems, reservations: reservationItems } = await getInventory();

@@ -66,6 +66,49 @@ export const RESERVE_STOCK_ITEM_TOOL: Tool = {
   }
 };
 
+export const CREATE_PRODUCT_TOOL: Tool = {
+  name: "create_product",
+  description: "Create a new product in the system. REQUIRES CONFIRMATION. Only available for merchants.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      name: { type: "string", description: "Product name" },
+      description: { type: "string", description: "Product description" },
+      price: { type: "number", description: "Product price" },
+      category: { type: "string", description: "Product category" }
+    },
+    required: ["name", "price", "category"]
+  }
+};
+
+export const UPDATE_PRODUCT_TOOL: Tool = {
+  name: "update_product",
+  description: "Update an existing product. REQUIRES CONFIRMATION.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      product_id: { type: "string", description: "The ID of the product to update" },
+      name: { type: "string", description: "New product name" },
+      description: { type: "string", description: "New product description" },
+      price: { type: "number", description: "New product price" },
+      category: { type: "string", description: "New product category" }
+    },
+    required: ["product_id"]
+  }
+};
+
+export const DELETE_PRODUCT_TOOL: Tool = {
+  name: "delete_product",
+  description: "Delete a product from the system. REQUIRES CONFIRMATION.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      product_id: { type: "string", description: "The ID of the product to delete" }
+    },
+    required: ["product_id"]
+  }
+};
+
 /**
  * Tool Metadata for IntentionEngine Integration
  * Defines confirmation requirements and categorization for each tool
@@ -151,6 +194,21 @@ export const TOOL_METADATA = {
     category: "external",
     description: "State-changing reservation that decrements stock",
     side_effects: ["Decrements stock.available_quantity", "Creates reservation record"]
+  },
+  create_product: {
+    requires_confirmation: true,
+    category: "action",
+    description: "Create a new product record"
+  },
+  update_product: {
+    requires_confirmation: true,
+    category: "action",
+    description: "Update an existing product record"
+  },
+  delete_product: {
+    requires_confirmation: true,
+    category: "action",
+    description: "Permanently remove a product record"
   }
 };
 

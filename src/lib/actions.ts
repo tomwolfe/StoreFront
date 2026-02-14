@@ -7,7 +7,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { SearchSchema } from "@/lib/shared-schema";
 
-import { auth } from "@/auth";
+import { auth } from "@clerk/nextjs/server";
 import { reservations, users } from "@/lib/db/schema";
 
 const reserveSchema = z.object({
@@ -70,9 +70,14 @@ export async function reserveStock(data: {
   store_id: string;
   quantity: number;
 }) {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const { userId } = await auth();
+  if (!userId) {
     return { success: false, error: "Authentication required" } as const;
+  }
+
+  const [user] = await db.select().from(users).where(eq(users.clerkId, userId)).limit(1);
+  if (!user) {
+    return { success: false, error: "User not found" } as const;
   }
 
   const { product_id, store_id, quantity } = reserveSchema.parse(data);
@@ -112,13 +117,8 @@ export async function reserveStock(data: {
           )
         );
 
-      // Create reservation
-      if (!session.user?.id) {
-        throw new Error("User ID is missing from session");
-      }
-
       await tx.insert(reservations).values({
-        userId: session.user.id,
+        userId: user.id,
         productId: product_id,
         storeId: store_id,
         quantity: quantity,
@@ -135,8 +135,8 @@ export async function reserveStock(data: {
 }
 
 export async function getInventory() {
-  const session = await auth();
-  if (!session?.user?.id) {
+  const { userId } = await auth();
+  if (!userId) {
     throw new Error("Authentication required");
   }
 
@@ -144,7 +144,7 @@ export async function getInventory() {
   const [user] = await db
     .select()
     .from(users)
-    .where(eq(users.id, session.user.id))
+    .where(eq(users.clerkId, userId))
     .limit(1);
 
   if (!user || user.role !== "merchant" || !user.managedStoreId) {
