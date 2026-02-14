@@ -5,7 +5,7 @@ import { stores, products, stock } from "@/lib/db/schema";
 import { eq, and, gt, sql, ilike, desc } from "drizzle-orm";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import { SearchSchema } from "@shared/schema";
+import { SearchSchema } from "@/lib/shared-schema";
 
 const reserveSchema = z.object({
   product_id: z.string().uuid(),
